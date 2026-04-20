@@ -4,201 +4,603 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Hambulab Cloud</title>
-
     <style>
-        /* Tu CSS se mantiene igual (lo omito aquí por brevedad, copia el tuyo completo) */
-        :root { 
-            --primary: #d35400; --secondary: #27ae60; --bg: #f0f2f5; --dark: #2c3e50; 
-            --sidebar: #ffffff; --container: #ffffff; --text: #333333; --border: #dddddd;
-            --input-bg: #ffffff; --danger: #e74c3c;
+        :root {
+            --primary: #d35400;
+            --secondary: #27ae60;
+            --bg: #f0f2f5;
+            --dark: #2c3e50;
+            --sidebar: #ffffff;
+            --container: #ffffff;
+            --text: #333333;
+            --border: #dddddd;
+            --input-bg: #ffffff;
+            --danger: #e74c3c;
         }
+        
         [data-theme="dark"] {
-            --bg: #121212; --sidebar: #1e1e1e; --container: #1e1e1e; --text: #e0e0e0;
-            --border: #333333; --input-bg: #2d2d2d; --dark: #ffffff;
+            --bg: #121212;
+            --sidebar: #1e1e1e;
+            --container: #1e1e1e;
+            --text: #e0e0e0;
+            --border: #333333;
+            --input-bg: #2d2d2d;
+            --dark: #ffffff;
         }
-        /* ... resto de tu CSS igual ... */
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: var(--sidebar);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 3px 0 15px rgba(0, 0, 0, 0.1);
+            z-index: 10;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .sidebar-header h2 {
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin: 0;
+        }
+
+        .theme-switch {
+            background: none;
+            border: none;
+            font-size: 1.6rem;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 50%;
+            transition: transform 0.3s;
+        }
+
+        .theme-switch:hover {
+            transform: rotate(30deg);
+        }
+
+        .recipe-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+        }
+
+        .recipe-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 16px;
+            margin-bottom: 6px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .recipe-item:hover {
+            background: rgba(211, 84, 0, 0.08);
+        }
+
+        [data-theme="dark"] .recipe-item:hover {
+            background: #333;
+        }
+
+        .recipe-item.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .recipe-item span:first-child {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .btn-new {
+            margin: 15px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 14px 20px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 10px rgba(211, 84, 0, 0.3);
+        }
+
+        .btn-new:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(211, 84, 0, 0.4);
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+            background: var(--bg);
+        }
+
+        .container {
+            max-width: 920px;
+            margin: 0 auto;
+            background: var(--container);
+            border-radius: 16px;
+            box-shadow: 0 10px 35px rgba(0, 0, 0, 0.08);
+            padding: 35px;
+            border: 1px solid var(--border);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        #noRecipeMessage {
+            text-align: center;
+            margin-top: 120px;
+            color: #888;
+        }
+
+        .recipe-title {
+            font-size: 2.4rem;
+            font-weight: 700;
+            border: none;
+            background: transparent;
+            outline: none;
+            width: 100%;
+            margin-bottom: 25px;
+            color: var(--dark);
+            line-height: 1.1;
+        }
+
+        .recipe-title:focus {
+            border-bottom: 4px solid var(--primary);
+        }
+
+        .meta {
+            display: flex;
+            gap: 40px;
+            margin-bottom: 35px;
+            flex-wrap: wrap;
+        }
+
+        .meta-label {
+            font-size: 0.95rem;
+            color: #666;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        .meta input {
+            width: 180px;
+            padding: 12px 16px;
+            font-size: 1.25rem;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            background: var(--input-bg);
+            color: var(--text);
+        }
+
+        .meta input:focus {
+            border-color: var(--primary);
+        }
+
+        h3 {
+            margin: 35px 0 12px;
+            font-size: 1.35rem;
+            color: var(--dark);
+        }
+
+        .item-list {
+            background: var(--input-bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 8px;
+            margin-bottom: 25px;
+        }
+
+        .item-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            background: var(--container);
+            border-radius: 8px;
+            margin-bottom: 6px;
+            border: 1px solid transparent;
+        }
+
+        .item-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .item-row input {
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 1rem;
+            background: var(--input-bg);
+        }
+
+        .item-row input.item-name {
+            flex: 1;
+        }
+
+        .item-row input.item-qty,
+        .item-row input.item-price {
+            width: 110px;
+        }
+
+        .btn-add {
+            background: var(--secondary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 1rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-add:hover {
+            background: #219653;
+        }
+
+        .summary {
+            margin-top: 40px;
+            padding: 20px;
+            background: rgba(211, 84, 0, 0.05);
+            border-radius: 10px;
+            border: 1px dashed var(--primary);
+            font-size: 1.1rem;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar { width: 100%; }
+            body { flex-direction: column; }
+        }
     </style>
 </head>
 <body>
-
-<div class="sidebar">
-    <!-- Tu sidebar igual -->
-    <div class="sidebar-header">
-        <h2 style="font-size: 1.2rem;">Hambulab Cloud</h2>
-        <button class="theme-switch" onclick="toggleTheme()">🌙</button>
-    </div>
-    <div class="recipe-list" id="sidebarList"></div>
-    <button class="btn-new" onclick="createNewRecipe()">+ Nueva Receta</button>
-</div>
-
-<div class="main-content">
-    <div id="noRecipeMessage" style="text-align:center; margin-top:50px; color:#888;">
-        <h3>Conectando a la nube...</h3>
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2>Hambulab Cloud</h2>
+            <button class="theme-switch" onclick="toggleTheme()">🌙</button>
+        </div>
+        <div class="recipe-list" id="sidebarList"></div>
+        <button class="btn-new" onclick="createNewRecipe()">+ Nueva Receta</button>
     </div>
 
-    <div class="container hidden" id="recipeEditor">
-        <!-- Tu editor igual -->
-        <h2 class="recipe-title" id="rtitle" contenteditable="true" onblur="saveCurrent()">Nombre</h2>
-        <!-- ... resto del HTML igual ... -->
+    <!-- MAIN CONTENT -->
+    <div class="main-content">
+        <div id="noRecipeMessage">
+            <h3>Conectando a la nube...</h3>
+            <p style="margin-top:10px; font-size:1.1rem;">Cargando tus recetas en tiempo real</p>
+        </div>
+
+        <div class="container hidden" id="recipeEditor">
+            <h2 class="recipe-title" id="rtitle" contenteditable="true" onblur="saveCurrent()">Nombre de la receta</h2>
+
+            <!-- Meta datos -->
+            <div class="meta">
+                <div>
+                    <span class="meta-label">💰 Costo de delivery</span>
+                    <input id="rdeli" type="number" step="0.01" onblur="saveCurrent()">
+                </div>
+                <div>
+                    <span class="meta-label">📈 Margen deseado (%)</span>
+                    <input id="rmargen" type="number" onblur="saveCurrent()">
+                </div>
+            </div>
+
+            <!-- Ingredientes -->
+            <h3>🥕 Ingredientes</h3>
+            <div id="ingList" class="item-list"></div>
+            <button onclick="addRow('ing')" class="btn-add">+ Agregar ingrediente</button>
+
+            <!-- Empaques -->
+            <h3>📦 Empaques / Packaging</h3>
+            <div id="packList" class="item-list"></div>
+            <button onclick="addRow('pack')" class="btn-add">+ Agregar empaque</button>
+
+            <!-- Resumen (opcional pero útil) -->
+            <div class="summary" id="summary">
+                <strong>Resumen de costos:</strong> 
+                <span id="totalCost">Calculando...</span>
+            </div>
+        </div>
     </div>
-</div>
 
-<!-- === SCRIPTS DE FIREBASE (CORREGIDOS) === -->
-<script type="module">
-    // Configuración de tu proyecto (la que ya tenías)
-    const firebaseConfig = {
-      apiKey: "AIzaSyBoCEVoWzDE_jvvfPQcPm190j8nWdaWmJQ",
-      authDomain: "hambulab-cloud.firebaseapp.com",
-      databaseURL: "https://hambulab-cloud-default-rtdb.firebaseio.com",
-      projectId: "hambulab-cloud",
-      storageBucket: "hambulab-cloud.firebasestorage.app",
-      messagingSenderId: "6134788683",
-      appId: "1:6134788683:web:46c3dc175e7d0ff18553ce"
-    };
-
-    // Importar Firebase (versión modular actual)
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
-    import { getDatabase, ref, onValue, set, remove, push } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-database.js";
-
-    // Inicializar Firebase
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-
-    let recipes = [];
-    let currentId = null;
-
-    // Escuchar cambios en tiempo real
-    const recipesRef = ref(db, 'recipes');
-    onValue(recipesRef, (snapshot) => {
-        const data = snapshot.val();
-        recipes = data ? Object.values(data) : [];
-        renderSidebar();
-        
-        const msg = document.getElementById('noRecipeMessage');
-        if (currentId) {
-            const r = recipes.find(rec => rec.id == currentId);
-            if (r) updateUI(r);
-        } else {
-            msg.innerHTML = "<h3>Selecciona o crea una receta</h3>";
-        }
-    });
-
-    function createNewRecipe() {
-        const id = Date.now().toString(); // mejor usar string para keys
-        const newR = { 
-            id, 
-            title: "Nueva Receta", 
-            ing: [], 
-            pack: [], 
-            deli: 0, 
-            margen: 70 
+    <!-- FIREBASE SCRIPT -->
+    <script type="module">
+        // ==================== CONFIGURACIÓN FIREBASE ====================
+        const firebaseConfig = {
+            apiKey: "AIzaSyBoCEVoWzDE_jvvfPQcPm190j8nWdaWmJQ",
+            authDomain: "hambulab-cloud.firebaseapp.com",
+            databaseURL: "https://hambulab-cloud-default-rtdb.firebaseio.com",
+            projectId: "hambulab-cloud",
+            storageBucket: "hambulab-cloud.firebasestorage.app",
+            messagingSenderId: "6134788683",
+            appId: "1:6134788683:web:46c3dc175e7d0ff18553ce"
         };
-        
-        const newRef = ref(db, 'recipes/' + id);
-        set(newRef, newR).then(() => {
-            loadRecipe(id);
-        });
-    }
 
-    function renderSidebar() {
-        const list = document.getElementById('sidebarList');
-        list.innerHTML = '';
-        recipes.forEach(r => {
-            const div = document.createElement('div');
-            div.className = `recipe-item ${r.id == currentId ? 'active' : ''}`;
-            div.innerHTML = `<span onclick="loadRecipe('${r.id}')">${r.title}</span>
-                             <span style="color:var(--danger); font-weight:bold; cursor:pointer;" onclick="deleteRecipe('${r.id}')">✕</span>`;
-            list.appendChild(div);
-        });
-    }
+        // Importar Firebase (versión actual estable)
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+        import { getDatabase, ref, onValue, set, remove, push } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
 
-    function loadRecipe(id) {
-        currentId = id;
-        const r = recipes.find(rec => rec.id == id);
-        if (r) {
-            document.getElementById('noRecipeMessage').classList.add('hidden');
-            document.getElementById('recipeEditor').classList.remove('hidden');
-            updateUI(r);
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        let recipes = [];
+        let currentId = null;
+
+        // ==================== ESCUCHA EN TIEMPO REAL ====================
+        const recipesRef = ref(db, 'recipes');
+        onValue(recipesRef, (snapshot) => {
+            const data = snapshot.val();
+            recipes = data ? Object.values(data) : [];
+            
             renderSidebar();
+
+            const msg = document.getElementById('noRecipeMessage');
+            if (currentId) {
+                const currentRecipe = recipes.find(r => r.id === currentId);
+                if (currentRecipe) {
+                    updateUI(currentRecipe);
+                }
+            } else {
+                msg.innerHTML = `
+                    <h3>👋 ¡Bienvenido a Hambulab Cloud!</h3>
+                    <p style="margin-top:15px;">Selecciona una receta del menú o crea una nueva</p>
+                `;
+            }
+        });
+
+        // ==================== FUNCIONES PRINCIPALES ====================
+        function createNewRecipe() {
+            const id = Date.now().toString();
+            const newR = {
+                id: id,
+                title: "Nueva Receta",
+                ing: [],
+                pack: [],
+                deli: 0,
+                margen: 70
+            };
+
+            const newRef = ref(db, 'recipes/' + id);
+            set(newRef, newR).then(() => {
+                loadRecipe(id);
+            });
         }
-    }
 
-    // addRow, updateUI, editItem, removeItem, saveCurrent, deleteRecipe, toggleTheme
-    // (mantengo tu lógica casi igual, solo ajusto algunas cosas)
+        function renderSidebar() {
+            const list = document.getElementById('sidebarList');
+            list.innerHTML = '';
 
-    function addRow(type) {
-        if (!currentId) return;
-        const r = recipes.find(rec => rec.id == currentId);
-        if (!r) return;
+            if (recipes.length === 0) {
+                list.innerHTML = `<div style="padding:20px; text-align:center; color:#888; font-style:italic;">Aún no tienes recetas</div>`;
+                return;
+            }
 
-        if (type === 'ingList') {
-            if (!r.ing) r.ing = [];
-            r.ing.push({ n: "", q: 0, p: 0 });
-        } else {
-            if (!r.pack) r.pack = [];
-            r.pack.push({ n: "", p: 0 });
+            recipes.forEach(r => {
+                const div = document.createElement('div');
+                div.className = `recipe-item ${r.id === currentId ? 'active' : ''}`;
+                div.innerHTML = `
+                    <span onclick="loadRecipe('${r.id}')">${r.title || 'Sin nombre'}</span>
+                    <span onclick="event.stopImmediatePropagation(); deleteRecipe('${r.id}')" style="color:var(--danger); font-weight:bold; cursor:pointer; font-size:1.3rem;">✕</span>
+                `;
+                list.appendChild(div);
+            });
         }
-        saveCurrent();
-    }
 
-    function updateUI(r) {
-        // ... tu función updateUI se mantiene casi idéntica ...
-        // (copia la que tenías)
-        document.getElementById('rtitle').innerText = r.title || "Nombre";
-        document.getElementById('rdeli').value = r.deli || 0;
-        document.getElementById('rmargen').value = r.margen || 70;
-        
-        // Resto del código de updateUI igual (ingList y packList)
-        // ...
-    }
+        function loadRecipe(id) {
+            currentId = id;
+            const r = recipes.find(rec => rec.id === id);
+            if (r) {
+                document.getElementById('noRecipeMessage').classList.add('hidden');
+                document.getElementById('recipeEditor').classList.remove('hidden');
+                updateUI(r);
+                renderSidebar();
+            }
+        }
 
-    function saveCurrent() {
-        if (!currentId) return;
-        
-        const r = {
-            id: currentId,
-            title: document.getElementById('rtitle').innerText.trim() || "Sin nombre",
-            deli: parseFloat(document.getElementById('rdeli').value) || 0,
-            margen: parseFloat(document.getElementById('rmargen').value) || 70,
-            ing: recipes.find(rec => rec.id == currentId)?.ing || [],
-            pack: recipes.find(rec => rec.id == currentId)?.pack || []
-        };
+        function updateUI(r) {
+            // Título y meta
+            document.getElementById('rtitle').textContent = r.title || "Nombre de la receta";
+            document.getElementById('rdeli').value = r.deli || 0;
+            document.getElementById('rmargen').value = r.margen || 70;
 
-        set(ref(db, 'recipes/' + currentId), r);
-    }
+            // Ingredientes
+            const ingList = document.getElementById('ingList');
+            ingList.innerHTML = '';
+            if (r.ing && r.ing.length > 0) {
+                r.ing.forEach((item, i) => {
+                    ingList.appendChild(createItemRow('ing', item, i));
+                });
+            } else {
+                ingList.innerHTML = `<p style="padding:20px; color:#888; text-align:center;">Aún no hay ingredientes</p>`;
+            }
 
-    function deleteRecipe(id) {
-        if (confirm('¿Borrar receta?')) {
+            // Empaques
+            const packList = document.getElementById('packList');
+            packList.innerHTML = '';
+            if (r.pack && r.pack.length > 0) {
+                r.pack.forEach((item, i) => {
+                    packList.appendChild(createItemRow('pack', item, i));
+                });
+            } else {
+                packList.innerHTML = `<p style="padding:20px; color:#888; text-align:center;">Aún no hay empaques</p>`;
+            }
+
+            // Resumen simple
+            calculateSummary(r);
+        }
+
+        function createItemRow(type, item, index) {
+            const row = document.createElement('div');
+            row.className = 'item-row';
+            const isIng = type === 'ing';
+
+            row.innerHTML = `
+                <input type="text" class="item-name" value="${item.n || ''}" 
+                       placeholder="${isIng ? 'Nombre del ingrediente' : 'Nombre del empaque'}" 
+                       onblur="editItem('${type}', ${index}, 'n', this.value)">
+                
+                ${isIng ? `
+                <input type="number" class="item-qty" value="${item.q || 0}" 
+                       placeholder="Cant." step="0.01" 
+                       onblur="editItem('${type}', ${index}, 'q', parseFloat(this.value))">
+                ` : ''}
+                
+                <input type="number" class="item-price" value="${item.p || 0}" 
+                       placeholder="Precio $" step="0.01" 
+                       onblur="editItem('${type}', ${index}, 'p', parseFloat(this.value))">
+                
+                <button onclick="removeItem('${type}', ${index}); event.stopImmediatePropagation()" 
+                        style="background:none; border:none; color:var(--danger); font-size:1.6rem; cursor:pointer; padding:0 8px;">×</button>
+            `;
+            return row;
+        }
+
+        function editItem(type, idx, field, value) {
+            if (!currentId) return;
+            const r = recipes.find(rec => rec.id === currentId);
+            if (!r) return;
+
+            const list = type === 'ing' ? r.ing : r.pack;
+            if (!list || !list[idx]) return;
+
+            if (field === 'n') list[idx].n = value.trim();
+            else if (field === 'q' || field === 'p') list[idx][field] = isNaN(value) ? 0 : value;
+
+            saveCurrent();
+            updateUI(r); // feedback inmediato
+        }
+
+        function removeItem(type, idx) {
+            if (!currentId) return;
+            if (!confirm('¿Eliminar este elemento?')) return;
+
+            const r = recipes.find(rec => rec.id === currentId);
+            if (!r) return;
+
+            const list = type === 'ing' ? r.ing : r.pack;
+            if (!list) return;
+
+            list.splice(idx, 1);
+            saveCurrent();
+            updateUI(r);
+        }
+
+        function addRow(type) {
+            if (!currentId) return;
+            const r = recipes.find(rec => rec.id === currentId);
+            if (!r) return;
+
+            if (type === 'ing') {
+                if (!r.ing) r.ing = [];
+                r.ing.push({ n: "", q: 0, p: 0 });
+            } else if (type === 'pack') {
+                if (!r.pack) r.pack = [];
+                r.pack.push({ n: "", p: 0 });
+            }
+
+            updateUI(r);
+            saveCurrent();
+        }
+
+        function saveCurrent() {
+            if (!currentId) return;
+
+            const r = recipes.find(rec => rec.id === currentId);
+            if (!r) return;
+
+            const updated = {
+                id: currentId,
+                title: document.getElementById('rtitle').textContent.trim() || "Sin nombre",
+                deli: parseFloat(document.getElementById('rdeli').value) || 0,
+                margen: parseFloat(document.getElementById('rmargen').value) || 70,
+                ing: r.ing || [],
+                pack: r.pack || []
+            };
+
+            set(ref(db, 'recipes/' + currentId), updated);
+        }
+
+        function deleteRecipe(id) {
+            if (!confirm('¿Estás seguro de borrar esta receta?')) return;
+            
             remove(ref(db, 'recipes/' + id));
-            if (currentId == id) {
+            
+            if (currentId === id) {
                 currentId = null;
                 document.getElementById('recipeEditor').classList.add('hidden');
                 document.getElementById('noRecipeMessage').classList.remove('hidden');
             }
         }
-    }
 
-    function toggleTheme() {
-        const body = document.documentElement;
-        const theme = body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-        body.setAttribute('data-theme', theme);
-    }
+        function toggleTheme() {
+            const html = document.documentElement;
+            const isDark = html.getAttribute('data-theme') === 'dark';
+            html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+        }
 
-    // Exportar funciones al window para que onclick las encuentre
-    window.createNewRecipe = createNewRecipe;
-    window.loadRecipe = loadRecipe;
-    window.deleteRecipe = deleteRecipe;
-    window.addRow = addRow;
-    window.toggleTheme = toggleTheme;
-    window.saveCurrent = saveCurrent;
-    // Agrega las demás funciones que uses en onclick (editItem, removeItem, etc.)
-</script>
+        function calculateSummary(r) {
+            const ingCost = (r.ing || []).reduce((acc, i) => acc + (i.q || 0) * (i.p || 0), 0);
+            const packCost = (r.pack || []).reduce((acc, p) => acc + (p.p || 0), 0);
+            const totalCost = ingCost + packCost + (r.deli || 0);
+            const margen = r.margen || 70;
+            const precioVenta = totalCost / (1 - margen / 100);
 
-<!-- Tus otras funciones (editItem, removeItem, etc.) van aquí o dentro del type="module" con window. -->
-<script>
-    // Si prefieres, pon aquí las funciones restantes que no necesitan Firebase
-    // y exponlas con window.editItem = editItem; etc.
-</script>
+            document.getElementById('summary').innerHTML = `
+                <strong>Resumen de costos:</strong><br>
+                Ingredientes: <strong>$${ingCost.toFixed(2)}</strong> • 
+                Empaques: <strong>$${packCost.toFixed(2)}</strong> • 
+                Delivery: <strong>$${r.deli.toFixed(2)}</strong><br>
+                <span style="font-size:1.4rem; color:var(--primary);">Costo total: <strong>$${totalCost.toFixed(2)}</strong></span><br>
+                Precio de venta sugerido (<strong>${margen}% margen</strong>): <strong>$${precioVenta.toFixed(2)}</strong>
+            `;
+        }
 
+        // ==================== EXPONER FUNCIONES AL DOM ====================
+        window.createNewRecipe = createNewRecipe;
+        window.loadRecipe = loadRecipe;
+        window.deleteRecipe = deleteRecipe;
+        window.addRow = addRow;
+        window.editItem = editItem;
+        window.removeItem = removeItem;
+        window.saveCurrent = saveCurrent;
+        window.toggleTheme = toggleTheme;
+    </script>
 </body>
 </html>
