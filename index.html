@@ -1,131 +1,253 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Costos Hamburguesería</title>
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f9; padding: 20px; color: #333; }
-        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        h1, h2 { color: #ff5722; text-align: center; }
-        .section { margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid #eee; }
-        .row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
-        input[type="text"], input[type="number"] { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
-        button { background-color: #ff5722; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        button:hover { background-color: #e64a19; }
-        .btn-add { background-color: #4CAF50; margin-bottom: 10px;}
-        .btn-add:hover { background-color: #45a049; }
-        .results { background: #fff3e0; padding: 15px; border-radius: 10px; border: 2px dashed #ff5722; }
-        .results p { font-size: 1.1em; margin: 10px 0; }
-        .total-price { font-size: 1.5em; font-weight: bold; color: #d84315; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HambuCloud 🍔</title>
+
+<style>
+body { font-family: Arial; background:#f4f4f9; padding:20px;}
+.container { max-width:700px; margin:auto; background:white; padding:20px; border-radius:10px;}
+h1,h2 { text-align:center; color:#ff5722;}
+.row { display:flex; gap:10px; margin-bottom:10px;}
+input { flex:1; padding:8px;}
+button { padding:8px 12px; border:none; background:#ff5722; color:white; cursor:pointer;}
+.btn-add{background:#4CAF50;}
+.tabs button{margin:3px;}
+.active{background:#333;}
+</style>
 </head>
+
 <body>
-
 <div class="container">
-    <h1>🍔 Calculadora de Costos</h1>
-    
-    <div class="section" id="ingredients-section">
-        <h2>Ingredientes (Precio por Kg)</h2>
-        <div id="ingredients-list">
-            </div>
-        <button class="btn-add" onclick="addIngredient()">+ Agregar Ingrediente</button>
-    </div>
+<h1>🍔 HambuCloud</h1>
 
-    <div class="section" id="packing-section">
-        <h2>Packing & Extras (Precio por unidad)</h2>
-        <div id="packing-list">
-            </div>
-        <button class="btn-add" onclick="addPacking()">+ Agregar Empaque</button>
-    </div>
+<h2>Productos</h2>
+<div id="tabs" class="tabs"></div>
+<button class="btn-add" onclick="createProduct()">+ Nuevo</button>
 
-    <div class="section">
-        <h2>Delivery y Ganancia</h2>
-        <div class="row">
-            <label style="flex:1">Costo de Delivery ($):</label>
-            <input type="number" id="delivery-cost" value="0" min="0" oninput="calculateTotal()">
-        </div>
-        <div class="row">
-            <label style="flex:1">Margen de Ganancia (%):</label>
-            <input type="number" id="profit-margin" value="50" min="0" oninput="calculateTotal()">
-        </div>
-    </div>
+<h2>Ingredientes</h2>
+<div id="ingredients-list"></div>
+<button class="btn-add" onclick="addIngredient()">+ Ingrediente</button>
 
-    <div class="results">
-        <h2>Resumen Financiero</h2>
-        <p>Costo Total de Ingredientes: $<span id="res-ingredients">0.00</span></p>
-        <p>Costo Total de Packing: $<span id="res-packing">0.00</span></p>
-        <p>Costo de Delivery: $<span id="res-delivery">0.00</span></p>
-        <hr>
-        <p style="font-weight: bold;">Costo de Producción Total: $<span id="res-total-cost">0.00</span></p>
-        <p class="total-price">Precio Sugerido de Venta: $<span id="res-sale-price">0.00</span></p>
-    </div>
+<h2>Packing</h2>
+<div id="packing-list"></div>
+<button class="btn-add" onclick="addPacking()">+ Packing</button>
+
+<h2>Extras</h2>
+<div class="row">
+<input type="number" id="delivery-cost" placeholder="Delivery" oninput="calculateTotal()">
+<input type="number" id="profit-margin" placeholder="Ganancia %" oninput="calculateTotal()">
 </div>
 
+<h2>Resultado</h2>
+<p>Total: $<span id="total">0</span></p>
+<p>Venta: $<span id="sale">0</span></p>
+
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
 <script>
-    function addIngredient() {
-        const div = document.createElement('div');
-        div.className = 'row';
-        div.innerHTML = `
-            <input type="text" placeholder="Ej: Carne, Queso" class="ing-name">
-            <input type="number" placeholder="Precio x Kg ($)" class="ing-price" oninput="calculateTotal()">
-            <input type="number" placeholder="Gramos usados" class="ing-grams" oninput="calculateTotal()">
-            <button onclick="this.parentElement.remove(); calculateTotal()">X</button>
-        `;
-        document.getElementById('ingredients-list').appendChild(div);
-    }
+const firebaseConfig = {
+  apiKey: "AIzaSyCAH5K0AT0807VW4UAhtptSLI0rvxE6N5s",
+  authDomain: "hambucloud.firebaseapp.com",
+  projectId: "hambucloud",
+  storageBucket: "hambucloud.firebasestorage.app",
+  messagingSenderId: "724901872177",
+  appId: "1:724901872177:web:0d03a414199ee5966dcb10"
+};
 
-    function addPacking() {
-        const div = document.createElement('div');
-        div.className = 'row';
-        div.innerHTML = `
-            <input type="text" placeholder="Ej: Caja, Bolsa" class="pack-name">
-            <input type="number" placeholder="Costo ($)" class="pack-cost" oninput="calculateTotal()">
-            <button onclick="this.parentElement.remove(); calculateTotal()">X</button>
-        `;
-        document.getElementById('packing-list').appendChild(div);
-    }
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
-    function calculateTotal() {
-        // Calcular Ingredientes
-        let totalIngredients = 0;
-        const prices = document.querySelectorAll('.ing-price');
-        const grams = document.querySelectorAll('.ing-grams');
-        
-        for(let i = 0; i < prices.length; i++) {
-            let priceKg = parseFloat(prices[i].value) || 0;
-            let gramUsed = parseFloat(grams[i].value) || 0;
-            // Regla de 3: (Precio por 1000g) -> costo por los gramos usados
-            totalIngredients += (priceKg / 1000) * gramUsed;
+// ===== ESTADO =====
+let products = {};
+let currentProduct = null;
+
+// ===== FIREBASE SYNC =====
+db.collection("productos").doc("data")
+.onSnapshot(doc => {
+    if(doc.exists){
+        products = doc.data();
+        if(!currentProduct){
+            currentProduct = Object.keys(products)[0];
+        }
+        renderTabs();
+        loadProduct();
+    }
+});
+
+// ===== GUARDAR EN LA NUBE =====
+function saveToCloud(){
+    db.collection("productos").doc("data").set(products);
+}
+
+// ===== PRODUCTOS =====
+function createProduct(){
+    const name = prompt("Nombre del producto:");
+    if(!name) return;
+
+    products[name] = {
+        ingredients: [],
+        packing: [],
+        delivery: 0,
+        margin: 50
+    };
+
+    currentProduct = name;
+    saveToCloud();
+}
+
+function renderTabs(){
+    const tabs = document.getElementById("tabs");
+    tabs.innerHTML = "";
+
+    Object.keys(products).forEach(name=>{
+        const btn = document.createElement("button");
+        btn.innerText = name;
+
+        if(name === currentProduct){
+            btn.classList.add("active");
         }
 
-        // Calcular Packing
-        let totalPacking = 0;
-        const packCosts = document.querySelectorAll('.pack-cost');
-        packCosts.forEach(input => {
-            totalPacking += parseFloat(input.value) || 0;
+        btn.onclick = ()=>{
+            saveCurrent();
+            currentProduct = name;
+            loadProduct();
+            renderTabs();
+        };
+
+        tabs.appendChild(btn);
+    });
+}
+
+// ===== UI =====
+function addIngredient(){
+    const div = document.createElement("div");
+    div.className="row";
+    div.innerHTML = `
+    <input class="ing-name" placeholder="Nombre">
+    <input class="ing-price" type="number" placeholder="$/kg" oninput="calculateTotal()">
+    <input class="ing-grams" type="number" placeholder="gramos" oninput="calculateTotal()">
+    <button onclick="this.parentElement.remove(); calculateTotal()">X</button>
+    `;
+    document.getElementById("ingredients-list").appendChild(div);
+}
+
+function addPacking(){
+    const div = document.createElement("div");
+    div.className="row";
+    div.innerHTML = `
+    <input class="pack-name" placeholder="Nombre">
+    <input class="pack-cost" type="number" placeholder="$" oninput="calculateTotal()">
+    <button onclick="this.parentElement.remove(); calculateTotal()">X</button>
+    `;
+    document.getElementById("packing-list").appendChild(div);
+}
+
+// ===== GUARDAR ACTUAL =====
+function saveCurrent(){
+    if(!currentProduct) return;
+
+    const ingredients=[];
+    document.querySelectorAll("#ingredients-list .row").forEach(r=>{
+        ingredients.push({
+            name:r.querySelector(".ing-name").value,
+            price:r.querySelector(".ing-price").value,
+            grams:r.querySelector(".ing-grams").value
         });
+    });
 
-        // Extras
-        let delivery = parseFloat(document.getElementById('delivery-cost').value) || 0;
-        let marginPercent = parseFloat(document.getElementById('profit-margin').value) || 0;
+    const packing=[];
+    document.querySelectorAll("#packing-list .row").forEach(r=>{
+        packing.push({
+            name:r.querySelector(".pack-name").value,
+            cost:r.querySelector(".pack-cost").value
+        });
+    });
 
-        // Totales
-        let costTotal = totalIngredients + totalPacking + delivery;
-        let finalPrice = costTotal + (costTotal * (marginPercent / 100));
+    products[currentProduct]={
+        ingredients,
+        packing,
+        delivery:document.getElementById("delivery-cost").value,
+        margin:document.getElementById("profit-margin").value
+    };
 
-        // Actualizar pantalla
-        document.getElementById('res-ingredients').innerText = totalIngredients.toFixed(2);
-        document.getElementById('res-packing').innerText = totalPacking.toFixed(2);
-        document.getElementById('res-delivery').innerText = delivery.toFixed(2);
-        document.getElementById('res-total-cost').innerText = costTotal.toFixed(2);
-        document.getElementById('res-sale-price').innerText = finalPrice.toFixed(2);
+    saveToCloud();
+}
+
+// ===== CARGAR =====
+function loadProduct(){
+    const data = products[currentProduct];
+    if(!data) return;
+
+    document.getElementById("ingredients-list").innerHTML="";
+    document.getElementById("packing-list").innerHTML="";
+
+    data.ingredients.forEach(i=>{
+        addIngredient();
+        const last = document.querySelector("#ingredients-list .row:last-child");
+        last.querySelector(".ing-name").value=i.name;
+        last.querySelector(".ing-price").value=i.price;
+        last.querySelector(".ing-grams").value=i.grams;
+    });
+
+    data.packing.forEach(p=>{
+        addPacking();
+        const last = document.querySelector("#packing-list .row:last-child");
+        last.querySelector(".pack-name").value=p.name;
+        last.querySelector(".pack-cost").value=p.cost;
+    });
+
+    document.getElementById("delivery-cost").value=data.delivery;
+    document.getElementById("profit-margin").value=data.margin;
+
+    calculateTotal();
+}
+
+// ===== CALCULO =====
+function calculateTotal(){
+    saveCurrent();
+
+    let totalIng=0;
+    document.querySelectorAll(".ing-price").forEach((p,i)=>{
+        const price=parseFloat(p.value)||0;
+        const grams=parseFloat(document.querySelectorAll(".ing-grams")[i].value)||0;
+        totalIng += (price/1000)*grams;
+    });
+
+    let totalPack=0;
+    document.querySelectorAll(".pack-cost").forEach(p=>{
+        totalPack += parseFloat(p.value)||0;
+    });
+
+    const delivery=parseFloat(document.getElementById("delivery-cost").value)||0;
+    const margin=parseFloat(document.getElementById("profit-margin").value)||0;
+
+    const total = totalIng + totalPack + delivery;
+    const sale = total + total*(margin/100);
+
+    document.getElementById("total").innerText=total.toFixed(2);
+    document.getElementById("sale").innerText=sale.toFixed(2);
+}
+
+// ===== INIT =====
+setTimeout(()=>{
+    if(Object.keys(products).length===0){
+        products["Hamburguesa Base"]={
+            ingredients:[],
+            packing:[],
+            delivery:0,
+            margin:50
+        };
+        currentProduct="Hamburguesa Base";
+        saveToCloud();
     }
+},1000);
 
-    // Agregar filas iniciales por defecto
-    addIngredient();
-    addPacking();
 </script>
-
 </body>
 </html>
