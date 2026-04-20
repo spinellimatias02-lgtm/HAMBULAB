@@ -1,194 +1,130 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Calculadora Gourmet Pro</title>
-
-<style>
-/* (TODO tu CSS original intacto) */
-:root { 
-    --primary: #d35400; --secondary: #27ae60; --bg: #f0f2f5; --dark: #2c3e50; 
-    --sidebar: #ffffff; --container: #ffffff; --text: #333333; --border: #dddddd;
-    --input-bg: #ffffff; --danger: #e74c3c;
-}
-[data-theme="dark"] {
-    --bg: #121212; --sidebar: #1e1e1e; --container: #1e1e1e; --text: #e0e0e0;
-    --border: #333333; --input-bg: #2d2d2d; --dark: #ffffff;
-}
-body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; display: flex; height: 100vh; overflow: hidden; color: var(--text); }
-.sidebar { width: 280px; background: var(--sidebar); border-right: 1px solid var(--border); padding: 20px; }
-.recipe-item { padding: 10px; margin-bottom: 10px; cursor: pointer; border:1px solid var(--border);}
-.recipe-item.active { background: var(--primary); color:#fff; }
-.main-content { flex-grow:1; padding:20px; overflow:auto;}
-.hidden { display:none; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Costos Hamburguesería</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f9; padding: 20px; color: #333; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        h1, h2 { color: #ff5722; text-align: center; }
+        .section { margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid #eee; }
+        .row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
+        input[type="text"], input[type="number"] { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
+        button { background-color: #ff5722; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        button:hover { background-color: #e64a19; }
+        .btn-add { background-color: #4CAF50; margin-bottom: 10px;}
+        .btn-add:hover { background-color: #45a049; }
+        .results { background: #fff3e0; padding: 15px; border-radius: 10px; border: 2px dashed #ff5722; }
+        .results p { font-size: 1.1em; margin: 10px 0; }
+        .total-price { font-size: 1.5em; font-weight: bold; color: #d84315; }
+    </style>
 </head>
-
 <body>
 
-<div class="sidebar">
-    <h2>Recetas</h2>
-    <div id="sidebarList"></div>
-    <button onclick="createNewRecipe()">+ Nueva</button>
-</div>
+<div class="container">
+    <h1>🍔 Calculadora de Costos</h1>
+    
+    <div class="section" id="ingredients-section">
+        <h2>Ingredientes (Precio por Kg)</h2>
+        <div id="ingredients-list">
+            </div>
+        <button class="btn-add" onclick="addIngredient()">+ Agregar Ingrediente</button>
+    </div>
 
-<div class="main-content">
-    <div id="noRecipeMessage">Selecciona una receta</div>
+    <div class="section" id="packing-section">
+        <h2>Packing & Extras (Precio por unidad)</h2>
+        <div id="packing-list">
+            </div>
+        <button class="btn-add" onclick="addPacking()">+ Agregar Empaque</button>
+    </div>
 
-    <div id="recipeEditor" class="hidden">
-        <h2 contenteditable="true" id="rtitle" oninput="saveCurrent()"></h2>
+    <div class="section">
+        <h2>Delivery y Ganancia</h2>
+        <div class="row">
+            <label style="flex:1">Costo de Delivery ($):</label>
+            <input type="number" id="delivery-cost" value="0" min="0" oninput="calculateTotal()">
+        </div>
+        <div class="row">
+            <label style="flex:1">Margen de Ganancia (%):</label>
+            <input type="number" id="profit-margin" value="50" min="0" oninput="calculateTotal()">
+        </div>
+    </div>
 
-        <h3>Insumos</h3>
-        <table><tbody id="ingList"></tbody></table>
-        <button onclick="addRow('ingList', true)">+ Insumo</button>
-
-        <h3>Packaging</h3>
-        <table><tbody id="packList"></tbody></table>
-        <button onclick="addRow('packList', false)">+ Pack</button>
-
-        <br>
-        Envío: <input id="rdeli" type="number" oninput="saveCurrent()">
-        Margen: <input id="rmargen" type="number" oninput="saveCurrent()">
-
-        <h3 id="resVenta">$0</h3>
+    <div class="results">
+        <h2>Resumen Financiero</h2>
+        <p>Costo Total de Ingredientes: $<span id="res-ingredients">0.00</span></p>
+        <p>Costo Total de Packing: $<span id="res-packing">0.00</span></p>
+        <p>Costo de Delivery: $<span id="res-delivery">0.00</span></p>
+        <hr>
+        <p style="font-weight: bold;">Costo de Producción Total: $<span id="res-total-cost">0.00</span></p>
+        <p class="total-price">Precio Sugerido de Venta: $<span id="res-sale-price">0.00</span></p>
     </div>
 </div>
 
-<!-- 🔥 FIREBASE MODERNO -->
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { 
-    getFirestore, collection, addDoc, getDocs, doc, setDoc, deleteDoc, onSnapshot 
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyBoCEVoWzDE_jvvfPQcPm190j8nWdaWmJQ",
-  authDomain: "hambulab-cloud.firebaseapp.com",
-  databaseURL: "https://hambulab-cloud-default-rtdb.firebaseio.com",
-  projectId: "hambulab-cloud",
-  storageBucket: "hambulab-cloud.firebasestorage.app",
-  messagingSenderId: "6134788683",
-  appId: "1:6134788683:web:46c3dc175e7d0ff18553ce"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
-let recipes = [];
-let currentId = null;
-
-const colRef = collection(db, "recipes");
-
-
-// 🔄 TIEMPO REAL
-onSnapshot(colRef, (snapshot) => {
-    recipes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    renderSidebar();
-});
-
-
-// 📌 UI
-window.createNewRecipe = async function () {
-    const docRef = await addDoc(colRef, {
-        title: "Nueva Receta",
-        ing: [],
-        pack: [],
-        deli: 0,
-        margen: 70
-    });
-    loadRecipe(docRef.id);
-};
-
-function renderSidebar() {
-    const list = document.getElementById('sidebarList');
-    list.innerHTML = '';
-
-    recipes.forEach(r => {
+<script>
+    function addIngredient() {
         const div = document.createElement('div');
-        div.className = "recipe-item" + (r.id === currentId ? " active" : "");
+        div.className = 'row';
         div.innerHTML = `
-            ${r.title}
-            <button onclick="deleteRecipe(event,'${r.id}')">X</button>
+            <input type="text" placeholder="Ej: Carne, Queso" class="ing-name">
+            <input type="number" placeholder="Precio x Kg ($)" class="ing-price" oninput="calculateTotal()">
+            <input type="number" placeholder="Gramos usados" class="ing-grams" oninput="calculateTotal()">
+            <button onclick="this.parentElement.remove(); calculateTotal()">X</button>
         `;
-        div.onclick = () => loadRecipe(r.id);
-        list.appendChild(div);
-    });
-}
-
-window.loadRecipe = function(id) {
-    currentId = id;
-    const r = recipes.find(x => x.id === id);
-
-    document.getElementById('recipeEditor').classList.remove('hidden');
-    document.getElementById('noRecipeMessage').classList.add('hidden');
-
-    document.getElementById('rtitle').innerText = r.title;
-    document.getElementById('rdeli').value = r.deli;
-    document.getElementById('rmargen').value = r.margen;
-
-    document.getElementById('ingList').innerHTML = '';
-    document.getElementById('packList').innerHTML = '';
-
-    r.ing.forEach(i => addRow('ingList', true, i));
-    r.pack.forEach(p => addRow('packList', false, p));
-};
-
-window.addRow = function(listId, isIng, data = {n:'',c:'',p:''}) {
-    const tr = document.createElement('tr');
-
-    if(isIng){
-        tr.innerHTML = `
-        <td><input class="n" value="${data.n}"></td>
-        <td><input class="c" type="number" value="${data.c}"></td>
-        <td><input class="p" type="number" value="${data.p}"></td>
-        <td><button onclick="this.closest('tr').remove(); saveCurrent()">X</button></td>`;
-    } else {
-        tr.innerHTML = `
-        <td><input class="n" value="${data.n}"></td>
-        <td><input class="p" type="number" value="${data.p}"></td>
-        <td><button onclick="this.closest('tr').remove(); saveCurrent()">X</button></td>`;
+        document.getElementById('ingredients-list').appendChild(div);
     }
 
-    document.getElementById(listId).appendChild(tr);
-};
-
-window.saveCurrent = async function() {
-    if(!currentId) return;
-
-    const r = {
-        title: document.getElementById('rtitle').innerText,
-        deli: parseFloat(document.getElementById('rdeli').value)||0,
-        margen: parseFloat(document.getElementById('rmargen').value)||0,
-        ing: [],
-        pack: []
-    };
-
-    document.querySelectorAll('#ingList tr').forEach(tr => {
-        r.ing.push({
-            n: tr.querySelector('.n').value,
-            c: tr.querySelector('.c').value,
-            p: tr.querySelector('.p').value
-        });
-    });
-
-    document.querySelectorAll('#packList tr').forEach(tr => {
-        r.pack.push({
-            n: tr.querySelector('.n').value,
-            p: tr.querySelector('.p').value
-        });
-    });
-
-    await setDoc(doc(db, "recipes", currentId), r);
-};
-
-window.deleteRecipe = async function(e,id){
-    e.stopPropagation();
-    if(confirm("Eliminar?")){
-        await deleteDoc(doc(db,"recipes",id));
+    function addPacking() {
+        const div = document.createElement('div');
+        div.className = 'row';
+        div.innerHTML = `
+            <input type="text" placeholder="Ej: Caja, Bolsa" class="pack-name">
+            <input type="number" placeholder="Costo ($)" class="pack-cost" oninput="calculateTotal()">
+            <button onclick="this.parentElement.remove(); calculateTotal()">X</button>
+        `;
+        document.getElementById('packing-list').appendChild(div);
     }
-};
 
+    function calculateTotal() {
+        // Calcular Ingredientes
+        let totalIngredients = 0;
+        const prices = document.querySelectorAll('.ing-price');
+        const grams = document.querySelectorAll('.ing-grams');
+        
+        for(let i = 0; i < prices.length; i++) {
+            let priceKg = parseFloat(prices[i].value) || 0;
+            let gramUsed = parseFloat(grams[i].value) || 0;
+            // Regla de 3: (Precio por 1000g) -> costo por los gramos usados
+            totalIngredients += (priceKg / 1000) * gramUsed;
+        }
+
+        // Calcular Packing
+        let totalPacking = 0;
+        const packCosts = document.querySelectorAll('.pack-cost');
+        packCosts.forEach(input => {
+            totalPacking += parseFloat(input.value) || 0;
+        });
+
+        // Extras
+        let delivery = parseFloat(document.getElementById('delivery-cost').value) || 0;
+        let marginPercent = parseFloat(document.getElementById('profit-margin').value) || 0;
+
+        // Totales
+        let costTotal = totalIngredients + totalPacking + delivery;
+        let finalPrice = costTotal + (costTotal * (marginPercent / 100));
+
+        // Actualizar pantalla
+        document.getElementById('res-ingredients').innerText = totalIngredients.toFixed(2);
+        document.getElementById('res-packing').innerText = totalPacking.toFixed(2);
+        document.getElementById('res-delivery').innerText = delivery.toFixed(2);
+        document.getElementById('res-total-cost').innerText = costTotal.toFixed(2);
+        document.getElementById('res-sale-price').innerText = finalPrice.toFixed(2);
+    }
+
+    // Agregar filas iniciales por defecto
+    addIngredient();
+    addPacking();
 </script>
 
 </body>
