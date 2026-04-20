@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Hambulab Cloud</title>
     
-    <!-- SCRIPTS DE FIREBASE CORREGIDOS (Versión 8) -->
-<script src="https://gstatic.com"></script>
-<script src="https://gstatic.com"></script>
+    <!-- ESTOS SON LOS LINKS QUE FALTABAN (CON .JS AL FINAL) -->
+    <script src="https://gstatic.com"></script>
+    <script src="https://gstatic.com"></script>
 
     <style>
         :root { 
@@ -101,8 +101,8 @@
 <script>
     const firebaseConfig = {
       apiKey: "AIzaSyBoCEVoWzDE_jvvfPQcPm190j8nWdaWmJQ",
-      authDomain: "://firebaseapp.com",
-      databaseURL: "https://firebaseio.com",
+      authDomain: "hambulab-cloud.firebaseapp.com",
+      databaseURL: "https://hambulab-cloud-default-rtdb.firebaseio.com",
       projectId: "hambulab-cloud",
       storageBucket: "hambulab-cloud.firebasestorage.app",
       messagingSenderId: "6134788683",
@@ -206,9 +206,9 @@
         const totalCosto = costIng + costPack + parseFloat(r.deli || 0);
         const precioVenta = totalCosto / (1 - (r.margen / 100));
         
-        document.getElementById('resProd').innerText = `$${totalCosto.toFixed(0)}`;
-        document.getElementById('resVenta').innerText = `$${precioVenta.toFixed(0)}`;
-        document.getElementById('resGana').innerText = `$${(precioVenta - totalCosto).toFixed(0)}`;
+        document.getElementById('resProd').innerText = "$" + totalCosto.toFixed(0);
+        document.getElementById('resVenta').innerText = "$" + precioVenta.toFixed(0);
+        document.getElementById('resGana').innerText = "$" + (precioVenta - totalCosto).toFixed(0);
     }
 
     function editItem(type, index, field, value) {
@@ -243,6 +243,7 @@
             if (currentId == id) {
                 currentId = null;
                 document.getElementById('recipeEditor').classList.add('hidden');
+                document.getElementById('noRecipeMessage').classList.remove('hidden');
             }
         }
     }
