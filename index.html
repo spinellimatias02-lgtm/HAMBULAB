@@ -3,7 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Hambulab Cloud • Control de Local</title>
+    <title>Hambulab Cloud • Firebase</title>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+
     <style>
         :root {
             --primary: #d35400;
@@ -76,7 +81,6 @@
             flex: 1;
             overflow-y: auto;
             padding: 12px;
-            scrollbar-width: thin;
         }
         .recipe-item {
             padding: 16px 18px;
@@ -98,19 +102,9 @@
             color: white;
             box-shadow: 0 8px 20px rgba(211, 84, 0, 0.3);
         }
-        .recipe-item .title {
-            font-weight: 700;
-            font-size: 1.05rem;
-        }
-        .recipe-item .info {
-            font-size: 0.8rem;
-            opacity: 0.85;
-            margin-top: 2px;
-        }
-        .recipe-item .total {
-            font-weight: 700;
-            font-size: 1.1rem;
-        }
+        .recipe-item .title { font-weight: 700; font-size: 1.05rem; }
+        .recipe-item .info { font-size: 0.8rem; opacity: 0.85; margin-top: 2px; }
+        .recipe-item .total { font-weight: 700; font-size: 1.1rem; }
 
         .btn-new {
             margin: 16px 20px;
@@ -135,11 +129,7 @@
         }
 
         /* Main Content */
-        .main-content {
-            flex: 1;
-            padding: 32px;
-            overflow-y: auto;
-        }
+        .main-content { flex: 1; padding: 32px; overflow-y: auto; }
         .container {
             max-width: 1000px;
             margin: 0 auto;
@@ -161,10 +151,7 @@
             border-bottom: 3px solid transparent;
             transition: 0.3s;
         }
-        .recipe-title:focus {
-            outline: none;
-            border-bottom-color: var(--primary);
-        }
+        .recipe-title:focus { outline: none; border-bottom-color: var(--primary); }
 
         .meta {
             display: flex;
@@ -172,10 +159,7 @@
             margin-bottom: 32px;
             flex-wrap: wrap;
         }
-        .meta div {
-            flex: 1;
-            min-width: 220px;
-        }
+        .meta div { flex: 1; min-width: 220px; }
         .meta-label {
             display: block;
             font-size: 0.85rem;
@@ -200,10 +184,7 @@
             box-shadow: 0 0 0 4px rgba(211, 84, 0, 0.15);
         }
 
-        /* Items */
-        .item-list {
-            margin-bottom: 20px;
-        }
+        .item-list { margin-bottom: 20px; }
         .item-row {
             display: grid;
             grid-template-columns: 3fr 1fr 1.3fr 1.2fr 60px;
@@ -216,9 +197,7 @@
             margin-bottom: 10px;
             transition: all 0.2s;
         }
-        .item-row:hover {
-            border-color: var(--primary);
-        }
+        .item-row:hover { border-color: var(--primary); }
         .item-row input {
             padding: 12px 14px;
             border-radius: 10px;
@@ -227,9 +206,7 @@
             color: var(--text);
             font-size: 1.05rem;
         }
-        .item-row input:focus {
-            border-color: var(--primary);
-        }
+        .item-row input:focus { border-color: var(--primary); }
         .subtotal {
             text-align: right;
             font-weight: 700;
@@ -246,9 +223,7 @@
             cursor: pointer;
             transition: all 0.3s ease;
         }
-        .btn-delete:hover {
-            transform: scale(1.3) rotate(90deg);
-        }
+        .btn-delete:hover { transform: scale(1.3) rotate(90deg); }
 
         .btn-add {
             background: var(--secondary);
@@ -270,7 +245,6 @@
             box-shadow: 0 10px 22px rgba(39, 174, 96, 0.5);
         }
 
-        /* Resumen */
         .summary-card {
             background: var(--container);
             border-radius: 20px;
@@ -293,17 +267,9 @@
             padding: 18px 0;
             border-bottom: 1px dashed var(--border);
         }
-        .summary-row:last-child {
-            border-bottom: none;
-        }
-        .summary-label {
-            font-size: 1.15rem;
-            font-weight: 500;
-        }
-        .summary-value {
-            font-size: 2.2rem;
-            font-weight: 800;
-        }
+        .summary-row:last-child { border-bottom: none; }
+        .summary-label { font-size: 1.15rem; font-weight: 500; }
+        .summary-value { font-size: 2.2rem; font-weight: 800; }
         .revenue-input {
             font-size: 2.2rem;
             font-weight: 800;
@@ -330,9 +296,7 @@
             <button class="theme-switch" onclick="toggleTheme()">🌓</button>
         </div>
         
-        <div class="recipe-list" id="recipeList">
-            <!-- Las cuentas se generan con JS -->
-        </div>
+        <div class="recipe-list" id="recipeList"></div>
         
         <button class="btn-new" onclick="createNewAccount()">
             <span>+</span> NUEVA CUENTA
@@ -340,19 +304,17 @@
     </aside>
 
     <main class="main-content">
-        <!-- Mensaje inicial -->
         <div id="noRecipeMessage" class="no-recipe">
             <div style="font-size: 4rem; margin-bottom: 20px;">📋</div>
             <h2 style="font-size: 1.8rem; margin-bottom: 12px;">¡Bienvenido a Hambulab Cloud!</h2>
             <p style="max-width: 420px; margin: 0 auto 30px; line-height: 1.5;">
-                Selecciona una cuenta existente o crea una nueva para registrar insumos, calcular costos y ver tus ganancias en tiempo real.
+                Selecciona una cuenta existente o crea una nueva para registrar insumos, calcular costos y ver tus ganancias.
             </p>
             <button onclick="createNewAccount()" class="btn-add" style="font-size: 1.2rem; padding: 18px 36px;">
                 + Crear primera cuenta
             </button>
         </div>
 
-        <!-- Editor principal -->
         <div id="editorContainer" class="container hidden">
             <input type="text" class="recipe-title" id="accTitle" placeholder="Nombre de la cuenta (ej: Día 20 Abr 2026)">
 
@@ -371,28 +333,25 @@
                 📦 Insumos / Gastos
             </h3>
 
-            <div id="itemList" class="item-list">
-                <!-- Filas dinámicas -->
-            </div>
+            <div id="itemList" class="item-list"></div>
 
             <button class="btn-add" onclick="addItemRow()">
                 <span style="font-size: 1.5rem;">+</span> AÑADIR INSUMO / GASTO
             </button>
 
-            <!-- RESUMEN FINANCIERO -->
             <div class="summary-card">
                 <h3>📊 Resumen Financiero</h3>
                 
                 <div class="summary-row">
-                    <span class="summary-label">Total Gastos (Insumos + Gastos)</span>
+                    <span class="summary-label">Total Gastos</span>
                     <span id="totalCost" class="summary-value" style="color: #e74c3c;">$ 0.00</span>
                 </div>
 
                 <div class="summary-row">
-                    <span class="summary-label">Ingresos Totales del Día</span>
+                    <span class="summary-label">Ingresos Totales</span>
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <span style="font-size: 2rem; color: var(--primary);">$</span>
-                        <input type="number" id="revenue" class="revenue-input" value="0" step="0.01" min="0" placeholder="0.00">
+                        <input type="number" id="revenue" class="revenue-input" value="0" step="0.01" min="0">
                     </div>
                 </div>
 
@@ -410,24 +369,53 @@
     </main>
 
     <script>
+        // ==================== TU CONFIGURACIÓN DE FIREBASE (YA INTEGRADA) ====================
+        const firebaseConfig = {
+            apiKey: "AIzaSyBoCEVoWzDE_jvvfPQcPm190j8nWdaWmJQ",
+            authDomain: "hambulab-cloud.firebaseapp.com",
+            databaseURL: "https://hambulab-cloud-default-rtdb.firebaseio.com",
+            projectId: "hambulab-cloud",
+            storageBucket: "hambulab-cloud.firebasestorage.app",
+            messagingSenderId: "6134788683",
+            appId: "1:6134788683:web:46c3dc175e7d0ff18553ce"
+        };
+
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
         // ==================== VARIABLES GLOBALES ====================
         let accounts = [];
         let currentAccount = null;
         let debounceTimer = null;
+        const userId = "mi-local";   // ← Cambia esto por algo único tuyo (ej: "hamburgueseria-central")
 
-        // ==================== FUNCIONES DE PERSISTENCIA ====================
-        function loadAccountsFromStorage() {
-            const saved = localStorage.getItem('hambulabAccounts');
-            if (saved) {
-                accounts = JSON.parse(saved);
+        // ==================== FUNCIONES CON FIREBASE ====================
+        async function loadAccountsFromFirebase() {
+            try {
+                const snapshot = await db.collection(`users/${userId}/accounts`).orderBy("createdAt", "desc").get();
+                accounts = [];
+                snapshot.forEach(doc => {
+                    accounts.push({ id: doc.id, ...doc.data() });
+                });
+                renderSidebar();
+            } catch (error) {
+                console.error("Error cargando cuentas:", error);
             }
         }
 
-        function saveAccounts() {
-            localStorage.setItem('hambulabAccounts', JSON.stringify(accounts));
+        async function saveAccountToFirebase(account) {
+            try {
+                const accountRef = db.collection(`users/${userId}/accounts`).doc(account.id);
+                await accountRef.set({
+                    ...account,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            } catch (error) {
+                console.error("Error guardando en Firebase:", error);
+            }
         }
 
-        // ==================== TEMA OSCURO ====================
         function toggleTheme() {
             const body = document.body;
             const current = body.getAttribute('data-theme');
@@ -435,7 +423,6 @@
             localStorage.setItem('theme', current === 'dark' ? 'light' : 'dark');
         }
 
-        // ==================== RENDER SIDEBAR ====================
         function renderSidebar() {
             const list = document.getElementById('recipeList');
             list.innerHTML = '';
@@ -445,7 +432,7 @@
                 empty.style.padding = '40px 20px';
                 empty.style.textAlign = 'center';
                 empty.style.color = '#888';
-                empty.innerHTML = `<p style="font-size:0.95rem;">Aún no tienes cuentas.<br>¡Crea la primera!</p>`;
+                empty.innerHTML = `<p>Aún no tienes cuentas.<br>¡Crea la primera!</p>`;
                 list.appendChild(empty);
                 return;
             }
@@ -457,205 +444,149 @@
 
                 const itemEl = document.createElement('div');
                 itemEl.className = `recipe-item ${currentAccount && currentAccount.id === acc.id ? 'active' : ''}`;
-                
                 itemEl.innerHTML = `
                     <div>
                         <div class="title">${acc.title}</div>
-                        <div class="info">${acc.date} • ${acc.user || 'Sin responsable'}</div>
+                        <div class="info">${acc.date || ''} • ${acc.user || 'Sin responsable'}</div>
                     </div>
-                    <div class="total" style="color: ${currentAccount && currentAccount.id === acc.id ? '#fff' : 'var(--primary)'}">
-                        $${totalCost.toFixed(2)}
-                    </div>
+                    <div class="total">$${totalCost.toFixed(2)}</div>
                 `;
-
                 itemEl.addEventListener('click', () => {
                     currentAccount = acc;
                     loadAccountIntoEditor();
                     renderSidebar();
                 });
-
                 list.appendChild(itemEl);
             });
         }
 
-        // ==================== CALCULAR TOTALES EN TIEMPO REAL ====================
         function calculateTotals() {
             if (!currentAccount) return;
-
             let totalCost = 0;
-            const rows = document.querySelectorAll('.item-row');
-
-            rows.forEach(row => {
+            document.querySelectorAll('.item-row').forEach(row => {
                 const qty = parseFloat(row.querySelector('.qty-input').value) || 0;
                 const price = parseFloat(row.querySelector('.price-input').value) || 0;
-                const subtotal = qty * price;
-                
-                const subtotalEl = row.querySelector('.subtotal');
-                subtotalEl.textContent = `$${subtotal.toFixed(2)}`;
-                
-                totalCost += subtotal;
+                totalCost += qty * price;
+                row.querySelector('.subtotal').textContent = `$${(qty * price).toFixed(2)}`;
             });
 
-            // Actualizar total gastos
             document.getElementById('totalCost').textContent = `$${totalCost.toFixed(2)}`;
 
-            // Ingresos
-            const revenueInput = document.getElementById('revenue');
-            const revenue = parseFloat(revenueInput.value) || 0;
-
-            // Ganancia
+            const revenue = parseFloat(document.getElementById('revenue').value) || 0;
             const profit = revenue - totalCost;
             const profitEl = document.getElementById('profit');
             profitEl.textContent = `$${profit.toFixed(2)}`;
             profitEl.style.color = profit >= 0 ? '#27ae60' : '#e74c3c';
 
-            // Margen
             const margin = revenue > 0 ? Math.round((profit / revenue) * 100) : 0;
             const marginEl = document.getElementById('margin');
             marginEl.textContent = `${margin}%`;
             marginEl.style.color = margin >= 30 ? '#27ae60' : (margin >= 10 ? '#f39c12' : '#e74c3c');
         }
 
-        // ==================== ACTUALIZAR Y GUARDAR ====================
-        function updateAndSave() {
+        async function updateAndSave() {
             if (!currentAccount) return;
 
-            // Guardar datos del formulario
             currentAccount.title = document.getElementById('accTitle').value.trim() || 'Cuenta sin nombre';
             currentAccount.date = document.getElementById('accDate').value;
             currentAccount.user = document.getElementById('accUser').value.trim();
-
-            // Guardar ingresos
             currentAccount.revenue = parseFloat(document.getElementById('revenue').value) || 0;
 
-            // Guardar insumos desde el DOM
             currentAccount.items = [];
-            const rows = document.querySelectorAll('.item-row');
-            rows.forEach(row => {
+            document.querySelectorAll('.item-row').forEach(row => {
                 const name = row.querySelector('.name-input').value.trim();
                 const qty = parseFloat(row.querySelector('.qty-input').value) || 0;
                 const price = parseFloat(row.querySelector('.price-input').value) || 0;
-
-                // Solo guardar filas con datos
                 if (name || qty > 0 || price > 0) {
                     currentAccount.items.push({ name, qty, price });
                 }
             });
 
-            saveAccounts();
+            await saveAccountToFirebase(currentAccount);
             calculateTotals();
-            renderSidebar(); // actualiza totales en sidebar
+            renderSidebar();
         }
 
-        // ==================== AÑADIR FILA DE INSUMO ====================
         function addItemRow(prefill = null) {
             const container = document.getElementById('itemList');
-            
             const row = document.createElement('div');
             row.className = 'item-row';
-
             row.innerHTML = `
                 <input type="text" class="name-input" placeholder="Nombre del insumo / gasto" value="${prefill ? prefill.name : ''}">
                 <input type="number" class="qty-input" placeholder="Cant." min="0" step="0.01" value="${prefill ? prefill.qty : ''}">
                 <input type="number" class="price-input" placeholder="Precio unit." min="0" step="0.01" value="${prefill ? prefill.price : ''}">
-                <span class="subtotal">\$ 0.00</span>
+                <span class="subtotal">$ 0.00</span>
                 <button class="btn-delete" onclick="this.closest('.item-row').remove(); updateAndSave();">✕</button>
             `;
-
             container.appendChild(row);
 
-            // Escuchar cambios en esta fila
             const inputs = row.querySelectorAll('input');
-            inputs.forEach(input => {
-                input.addEventListener('input', () => {
-                    clearTimeout(debounceTimer);
-                    debounceTimer = setTimeout(updateAndSave, 350);
-                });
-            });
-
-            // Si es la primera fila, enfocamos el nombre
-            if (!prefill && container.children.length === 1) {
-                row.querySelector('.name-input').focus();
-            }
+            inputs.forEach(input => input.addEventListener('input', () => {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(updateAndSave, 400);
+            }));
 
             calculateTotals();
         }
 
-        // ==================== CARGAR CUENTA EN EL EDITOR ====================
         function loadAccountIntoEditor() {
-            if (!currentAccount) return;
-
             document.getElementById('noRecipeMessage').classList.add('hidden');
             document.getElementById('editorContainer').classList.remove('hidden');
 
-            // Datos básicos
-            document.getElementById('accTitle').value = currentAccount.title;
+            document.getElementById('accTitle').value = currentAccount.title || '';
             document.getElementById('accDate').value = currentAccount.date || new Date().toISOString().split('T')[0];
             document.getElementById('accUser').value = currentAccount.user || '';
-
-            // Ingresos
             document.getElementById('revenue').value = currentAccount.revenue || 0;
 
-            // Limpiar y cargar insumos
             const itemList = document.getElementById('itemList');
             itemList.innerHTML = '';
 
             if (currentAccount.items && currentAccount.items.length > 0) {
                 currentAccount.items.forEach(item => addItemRow(item));
             } else {
-                addItemRow(); // al menos una fila vacía
+                addItemRow();
             }
 
             calculateTotals();
         }
 
-        // ==================== CREAR NUEVA CUENTA ====================
-        function createNewAccount() {
+        async function createNewAccount() {
             const newAccount = {
-                id: Date.now(),
+                id: Date.now().toString(),
                 title: `Cuenta ${new Date().toLocaleDateString('es-ES')}`,
                 date: new Date().toISOString().split('T')[0],
                 user: '',
                 items: [],
-                revenue: 0
+                revenue: 0,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
             };
 
-            accounts.unshift(newAccount); // nueva al principio
+            accounts.unshift(newAccount);
             currentAccount = newAccount;
-            
-            saveAccounts();
+
+            await saveAccountToFirebase(newAccount);
             renderSidebar();
             loadAccountIntoEditor();
         }
 
         // ==================== INICIALIZACIÓN ====================
-        window.onload = function () {
-            // Cargar tema guardado
+        window.onload = async function () {
             if (localStorage.getItem('theme') === 'dark') {
                 document.body.setAttribute('data-theme', 'dark');
             }
 
-            // Cargar cuentas
-            loadAccountsFromStorage();
-            renderSidebar();
+            await loadAccountsFromFirebase();
 
-            // Escuchar cambios en campos meta (título, fecha, responsable, ingresos)
-            const metaFields = ['accTitle', 'accDate', 'accUser', 'revenue'];
-            metaFields.forEach(id => {
+            const fields = ['accTitle', 'accDate', 'accUser', 'revenue'];
+            fields.forEach(id => {
                 const el = document.getElementById(id);
-                if (el) {
-                    el.addEventListener('input', () => {
-                        clearTimeout(debounceTimer);
-                        debounceTimer = setTimeout(updateAndSave, 350);
-                    });
-                }
+                if (el) el.addEventListener('input', () => {
+                    clearTimeout(debounceTimer);
+                    debounceTimer = setTimeout(updateAndSave, 500);
+                });
             });
 
-            // Si ya hay cuentas guardadas, puedes cargar automáticamente la última
-            // (opcional: descomenta la línea de abajo)
-            // if (accounts.length > 0) { currentAccount = accounts[0]; loadAccountIntoEditor(); }
-            
-            console.log('%c✅ Hambulab Cloud listo para calcular tus ganancias!', 'color:#d35400; font-weight:700;');
+            console.log('%c✅ Hambulab Cloud conectado a Firebase correctamente!', 'color:#d35400; font-weight:700;');
         };
     </script>
 </body>
