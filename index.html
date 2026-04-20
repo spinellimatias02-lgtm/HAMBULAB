@@ -369,7 +369,7 @@
     </main>
 
     <script>
-        // ==================== TU CONFIGURACIÓN DE FIREBASE (YA INTEGRADA) ====================
+        // ==================== TU FIREBASE CONFIG (NO LO MODIFIQUES) ====================
         const firebaseConfig = {
             apiKey: "AIzaSyBoCEVoWzDE_jvvfPQcPm190j8nWdaWmJQ",
             authDomain: "hambulab-cloud.firebaseapp.com",
@@ -380,27 +380,29 @@
             appId: "1:6134788683:web:46c3dc175e7d0ff18553ce"
         };
 
-        // Inicializar Firebase
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-
-        // ==================== VARIABLES GLOBALES ====================
+        // Variables globales
+        let db;
         let accounts = [];
         let currentAccount = null;
         let debounceTimer = null;
-        const userId = "mi-local";   // ← Cambia esto por algo único tuyo (ej: "hamburgueseria-central")
+        const userId = "mi-local";   // ← Cambia esto por algo único (ej: "hamburgueseria-central")
 
-        // ==================== FUNCIONES CON FIREBASE ====================
+        // ==================== FUNCIONES (todo igual que antes) ====================
+        function toggleTheme() {
+            const body = document.body;
+            const current = body.getAttribute('data-theme');
+            body.setAttribute('data-theme', current === 'dark' ? null : 'dark');
+            localStorage.setItem('theme', current === 'dark' ? 'light' : 'dark');
+        }
+
         async function loadAccountsFromFirebase() {
             try {
                 const snapshot = await db.collection(`users/${userId}/accounts`).orderBy("createdAt", "desc").get();
                 accounts = [];
-                snapshot.forEach(doc => {
-                    accounts.push({ id: doc.id, ...doc.data() });
-                });
+                snapshot.forEach(doc => accounts.push({ id: doc.id, ...doc.data() }));
                 renderSidebar();
             } catch (error) {
-                console.error("Error cargando cuentas:", error);
+                console.error("Error al cargar desde Firebase:", error);
             }
         }
 
@@ -414,13 +416,6 @@
             } catch (error) {
                 console.error("Error guardando en Firebase:", error);
             }
-        }
-
-        function toggleTheme() {
-            const body = document.body;
-            const current = body.getAttribute('data-theme');
-            body.setAttribute('data-theme', current === 'dark' ? null : 'dark');
-            localStorage.setItem('theme', current === 'dark' ? 'light' : 'dark');
         }
 
         function renderSidebar() {
@@ -438,10 +433,7 @@
             }
 
             accounts.forEach(acc => {
-                const totalCost = acc.items ? acc.items.reduce((sum, item) => {
-                    return sum + ((parseFloat(item.qty) || 0) * (parseFloat(item.price) || 0));
-                }, 0) : 0;
-
+                const totalCost = acc.items ? acc.items.reduce((sum, item) => sum + ((parseFloat(item.qty) || 0) * (parseFloat(item.price) || 0)), 0) : 0;
                 const itemEl = document.createElement('div');
                 itemEl.className = `recipe-item ${currentAccount && currentAccount.id === acc.id ? 'active' : ''}`;
                 itemEl.innerHTML = `
@@ -466,8 +458,9 @@
             document.querySelectorAll('.item-row').forEach(row => {
                 const qty = parseFloat(row.querySelector('.qty-input').value) || 0;
                 const price = parseFloat(row.querySelector('.price-input').value) || 0;
-                totalCost += qty * price;
-                row.querySelector('.subtotal').textContent = `$${(qty * price).toFixed(2)}`;
+                const subtotal = qty * price;
+                totalCost += subtotal;
+                row.querySelector('.subtotal').textContent = `$${subtotal.toFixed(2)}`;
             });
 
             document.getElementById('totalCost').textContent = `$${totalCost.toFixed(2)}`;
@@ -486,25 +479,28 @@
 
         async function updateAndSave() {
             if (!currentAccount) return;
+            try {
+                currentAccount.title = document.getElementById('accTitle').value.trim() || 'Cuenta sin nombre';
+                currentAccount.date = document.getElementById('accDate').value;
+                currentAccount.user = document.getElementById('accUser').value.trim();
+                currentAccount.revenue = parseFloat(document.getElementById('revenue').value) || 0;
 
-            currentAccount.title = document.getElementById('accTitle').value.trim() || 'Cuenta sin nombre';
-            currentAccount.date = document.getElementById('accDate').value;
-            currentAccount.user = document.getElementById('accUser').value.trim();
-            currentAccount.revenue = parseFloat(document.getElementById('revenue').value) || 0;
+                currentAccount.items = [];
+                document.querySelectorAll('.item-row').forEach(row => {
+                    const name = row.querySelector('.name-input').value.trim();
+                    const qty = parseFloat(row.querySelector('.qty-input').value) || 0;
+                    const price = parseFloat(row.querySelector('.price-input').value) || 0;
+                    if (name || qty > 0 || price > 0) {
+                        currentAccount.items.push({ name, qty, price });
+                    }
+                });
 
-            currentAccount.items = [];
-            document.querySelectorAll('.item-row').forEach(row => {
-                const name = row.querySelector('.name-input').value.trim();
-                const qty = parseFloat(row.querySelector('.qty-input').value) || 0;
-                const price = parseFloat(row.querySelector('.price-input').value) || 0;
-                if (name || qty > 0 || price > 0) {
-                    currentAccount.items.push({ name, qty, price });
-                }
-            });
-
-            await saveAccountToFirebase(currentAccount);
-            calculateTotals();
-            renderSidebar();
+                await saveAccountToFirebase(currentAccount);
+                calculateTotals();
+                renderSidebar();
+            } catch (e) {
+                console.error("Error en updateAndSave:", e);
+            }
         }
 
         function addItemRow(prefill = null) {
@@ -521,10 +517,12 @@
             container.appendChild(row);
 
             const inputs = row.querySelectorAll('input');
-            inputs.forEach(input => input.addEventListener('input', () => {
-                clearTimeout(debounceTimer);
-                debounceTimer = setTimeout(updateAndSave, 400);
-            }));
+            inputs.forEach(input => {
+                input.addEventListener('input', () => {
+                    clearTimeout(debounceTimer);
+                    debounceTimer = setTimeout(updateAndSave, 400);
+                });
+            });
 
             calculateTotals();
         }
@@ -546,47 +544,59 @@
             } else {
                 addItemRow();
             }
-
             calculateTotals();
         }
 
         async function createNewAccount() {
-            const newAccount = {
-                id: Date.now().toString(),
-                title: `Cuenta ${new Date().toLocaleDateString('es-ES')}`,
-                date: new Date().toISOString().split('T')[0],
-                user: '',
-                items: [],
-                revenue: 0,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            };
+            try {
+                const newAccount = {
+                    id: Date.now().toString(),
+                    title: `Cuenta ${new Date().toLocaleDateString('es-ES')}`,
+                    date: new Date().toISOString().split('T')[0],
+                    user: '',
+                    items: [],
+                    revenue: 0,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
 
-            accounts.unshift(newAccount);
-            currentAccount = newAccount;
+                accounts.unshift(newAccount);
+                currentAccount = newAccount;
 
-            await saveAccountToFirebase(newAccount);
-            renderSidebar();
-            loadAccountIntoEditor();
+                await saveAccountToFirebase(newAccount);
+                renderSidebar();
+                loadAccountIntoEditor();
+            } catch (e) {
+                console.error("Error creando cuenta:", e);
+            }
         }
 
-        // ==================== INICIALIZACIÓN ====================
+        // ==================== INICIALIZACIÓN (aquí se arregló todo) ====================
         window.onload = async function () {
+            // Inicializar Firebase aquí para evitar race condition
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.firestore();
+
+            // Tema
             if (localStorage.getItem('theme') === 'dark') {
                 document.body.setAttribute('data-theme', 'dark');
             }
 
+            // Cargar cuentas desde Firebase
             await loadAccountsFromFirebase();
 
+            // Escuchar cambios en los campos
             const fields = ['accTitle', 'accDate', 'accUser', 'revenue'];
             fields.forEach(id => {
                 const el = document.getElementById(id);
-                if (el) el.addEventListener('input', () => {
-                    clearTimeout(debounceTimer);
-                    debounceTimer = setTimeout(updateAndSave, 500);
-                });
+                if (el) {
+                    el.addEventListener('input', () => {
+                        clearTimeout(debounceTimer);
+                        debounceTimer = setTimeout(updateAndSave, 500);
+                    });
+                }
             });
 
-            console.log('%c✅ Hambulab Cloud conectado a Firebase correctamente!', 'color:#d35400; font-weight:700;');
+            console.log('%c✅ Hambulab Cloud + Firebase funcionando correctamente!', 'color:#d35400; font-weight:700;');
         };
     </script>
 </body>
