@@ -3,44 +3,79 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HambuCloud 🍔</title>
+<title>HambuCloud Pro</title>
 
 <style>
-body { font-family: Arial; background:#f4f4f9; padding:20px;}
-.container { max-width:700px; margin:auto; background:white; padding:20px; border-radius:10px;}
-h1,h2 { text-align:center; color:#ff5722;}
-.row { display:flex; gap:10px; margin-bottom:10px;}
-input { flex:1; padding:8px;}
-button { padding:8px 12px; border:none; background:#ff5722; color:white; cursor:pointer;}
-.btn-add{background:#4CAF50;}
-.tabs button{margin:3px;}
-.active{background:#333;}
+body { margin:0; font-family:Arial; display:flex; height:100vh; }
+
+.sidebar {
+    width:220px;
+    background:#222;
+    color:white;
+    padding:15px;
+    display:flex;
+    flex-direction:column;
+}
+
+.sidebar h2 { margin-top:0; }
+
+.product {
+    padding:8px;
+    margin:4px 0;
+    background:#333;
+    cursor:pointer;
+}
+
+.product.active { background:#ff5722; }
+
+.main {
+    flex:1;
+    padding:20px;
+    background:#f4f4f9;
+    overflow:auto;
+}
+
+.row { display:flex; gap:10px; margin-bottom:10px; }
+input { flex:1; padding:8px; }
+button { padding:8px; cursor:pointer; border:none; }
+.btn-add { background:#4CAF50; color:white; }
+.btn-del { background:#e53935; color:white; }
+.btn-save { background:#2196F3; color:white; margin-top:10px; }
+
+h2 { color:#ff5722; }
 </style>
 </head>
 
 <body>
-<div class="container">
-<h1>🍔 HambuCloud</h1>
 
-<h2>Productos</h2>
-<div id="tabs" class="tabs"></div>
-<button class="btn-add" onclick="createProduct()">+ Nuevo</button>
+<div class="sidebar">
+    <h2>🍔 Productos</h2>
+    <div id="product-list"></div>
+    <button class="btn-add" onclick="createProduct()">+ Nuevo</button>
+    <button class="btn-del" onclick="deleteProduct()">🗑 Eliminar</button>
+</div>
 
-<h2>Ingredientes</h2>
+<div class="main">
+
+<h2 id="title"></h2>
+
+<h3>Ingredientes</h3>
 <div id="ingredients-list"></div>
 <button class="btn-add" onclick="addIngredient()">+ Ingrediente</button>
 
-<h2>Packing</h2>
+<h3>Packing</h3>
 <div id="packing-list"></div>
 <button class="btn-add" onclick="addPacking()">+ Packing</button>
 
-<h2>Extras</h2>
+<h3>Extras</h3>
 <div class="row">
-<input type="number" id="delivery-cost" placeholder="Delivery" oninput="calculateTotal()">
-<input type="number" id="profit-margin" placeholder="Ganancia %" oninput="calculateTotal()">
+<input type="number" id="delivery-cost" placeholder="Delivery">
+<input type="number" id="profit-margin" placeholder="% Ganancia">
 </div>
 
-<h2>Resultado</h2>
+<button class="btn-save" onclick="saveCurrent()">💾 Guardar</button>
+
+<h3>Resultado</h3>
 <p>Total: $<span id="total">0</span></p>
 <p>Venta: $<span id="sale">0</span></p>
 
@@ -54,101 +89,116 @@ button { padding:8px 12px; border:none; background:#ff5722; color:white; cursor:
 const firebaseConfig = {
   apiKey: "AIzaSyCAH5K0AT0807VW4UAhtptSLI0rvxE6N5s",
   authDomain: "hambucloud.firebaseapp.com",
-  projectId: "hambucloud",
-  storageBucket: "hambucloud.firebasestorage.app",
-  messagingSenderId: "724901872177",
-  appId: "1:724901872177:web:0d03a414199ee5966dcb10"
+  projectId: "hambucloud"
 };
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// ===== ESTADO =====
 let products = {};
 let currentProduct = null;
 
-// ===== FIREBASE SYNC =====
-db.collection("productos").doc("data")
-.onSnapshot(doc => {
+// 🔥 CARGA INICIAL (UNA SOLA VEZ)
+async function loadFromCloud(){
+    const doc = await db.collection("productos").doc("data").get();
+
     if(doc.exists){
         products = doc.data();
-        if(!currentProduct){
-            currentProduct = Object.keys(products)[0];
-        }
-        renderTabs();
-        loadProduct();
+    } else {
+        products = {
+            "Hamburguesa Base": {
+                ingredients:[],
+                packing:[],
+                delivery:0,
+                margin:50
+            }
+        };
+        await saveToCloud();
     }
-});
 
-// ===== GUARDAR EN LA NUBE =====
-function saveToCloud(){
-    db.collection("productos").doc("data").set(products);
+    currentProduct = Object.keys(products)[0];
+    renderProducts();
+    loadProduct();
 }
 
-// ===== PRODUCTOS =====
-function createProduct(){
-    const name = prompt("Nombre del producto:");
-    if(!name) return;
-
-    products[name] = {
-        ingredients: [],
-        packing: [],
-        delivery: 0,
-        margin: 50
-    };
-
-    currentProduct = name;
-    saveToCloud();
+// 🔥 GUARDAR
+async function saveToCloud(){
+    await db.collection("productos").doc("data").set(products);
 }
 
-function renderTabs(){
-    const tabs = document.getElementById("tabs");
-    tabs.innerHTML = "";
+// 🔥 UI PRODUCTOS
+function renderProducts(){
+    const list = document.getElementById("product-list");
+    list.innerHTML="";
 
     Object.keys(products).forEach(name=>{
-        const btn = document.createElement("button");
-        btn.innerText = name;
+        const div = document.createElement("div");
+        div.className="product " + (name===currentProduct ? "active" : "");
+        div.innerText=name;
 
-        if(name === currentProduct){
-            btn.classList.add("active");
-        }
-
-        btn.onclick = ()=>{
+        div.onclick=()=>{
             saveCurrent();
-            currentProduct = name;
+            currentProduct=name;
+            renderProducts();
             loadProduct();
-            renderTabs();
         };
 
-        tabs.appendChild(btn);
+        list.appendChild(div);
     });
 }
 
-// ===== UI =====
+// 🔥 CREAR
+function createProduct(){
+    const name = prompt("Nombre:");
+    if(!name || products[name]) return;
+
+    products[name]={ingredients:[],packing:[],delivery:0,margin:50};
+    currentProduct=name;
+
+    renderProducts();
+    loadProduct();
+    saveToCloud();
+}
+
+// 🔥 ELIMINAR
+function deleteProduct(){
+    if(!currentProduct) return;
+
+    if(!confirm("¿Eliminar producto?")) return;
+
+    delete products[currentProduct];
+
+    const keys = Object.keys(products);
+    currentProduct = keys[0] || null;
+
+    renderProducts();
+    loadProduct();
+    saveToCloud();
+}
+
+// 🔥 UI
 function addIngredient(){
-    const div = document.createElement("div");
+    const div=document.createElement("div");
     div.className="row";
-    div.innerHTML = `
+    div.innerHTML=`
     <input class="ing-name" placeholder="Nombre">
-    <input class="ing-price" type="number" placeholder="$/kg" oninput="calculateTotal()">
-    <input class="ing-grams" type="number" placeholder="gramos" oninput="calculateTotal()">
-    <button onclick="this.parentElement.remove(); calculateTotal()">X</button>
-    `;
+    <input class="ing-price" type="number" placeholder="$/kg">
+    <input class="ing-grams" type="number" placeholder="g">
+    <button onclick="this.parentElement.remove()">X</button>`;
     document.getElementById("ingredients-list").appendChild(div);
 }
 
 function addPacking(){
-    const div = document.createElement("div");
+    const div=document.createElement("div");
     div.className="row";
-    div.innerHTML = `
+    div.innerHTML=`
     <input class="pack-name" placeholder="Nombre">
-    <input class="pack-cost" type="number" placeholder="$" oninput="calculateTotal()">
-    <button onclick="this.parentElement.remove(); calculateTotal()">X</button>
-    `;
+    <input class="pack-cost" type="number" placeholder="$">
+    <button onclick="this.parentElement.remove()">X</button>`;
     document.getElementById("packing-list").appendChild(div);
 }
 
-// ===== GUARDAR ACTUAL =====
+// 🔥 GUARDAR ACTUAL
 function saveCurrent(){
     if(!currentProduct) return;
 
@@ -177,19 +227,25 @@ function saveCurrent(){
     };
 
     saveToCloud();
+    calculateTotal();
 }
 
-// ===== CARGAR =====
+// 🔥 CARGAR
 function loadProduct(){
-    const data = products[currentProduct];
-    if(!data) return;
+    if(!currentProduct){
+        document.getElementById("title").innerText="Sin productos";
+        return;
+    }
 
+    const data = products[currentProduct];
+
+    document.getElementById("title").innerText=currentProduct;
     document.getElementById("ingredients-list").innerHTML="";
     document.getElementById("packing-list").innerHTML="";
 
     data.ingredients.forEach(i=>{
         addIngredient();
-        const last = document.querySelector("#ingredients-list .row:last-child");
+        const last=document.querySelector("#ingredients-list .row:last-child");
         last.querySelector(".ing-name").value=i.name;
         last.querySelector(".ing-price").value=i.price;
         last.querySelector(".ing-grams").value=i.grams;
@@ -197,7 +253,7 @@ function loadProduct(){
 
     data.packing.forEach(p=>{
         addPacking();
-        const last = document.querySelector("#packing-list .row:last-child");
+        const last=document.querySelector("#packing-list .row:last-child");
         last.querySelector(".pack-name").value=p.name;
         last.querySelector(".pack-cost").value=p.cost;
     });
@@ -208,46 +264,33 @@ function loadProduct(){
     calculateTotal();
 }
 
-// ===== CALCULO =====
+// 🔥 CALCULO
 function calculateTotal(){
-    saveCurrent();
+    let total=0;
 
-    let totalIng=0;
     document.querySelectorAll(".ing-price").forEach((p,i)=>{
         const price=parseFloat(p.value)||0;
         const grams=parseFloat(document.querySelectorAll(".ing-grams")[i].value)||0;
-        totalIng += (price/1000)*grams;
+        total += (price/1000)*grams;
     });
 
-    let totalPack=0;
     document.querySelectorAll(".pack-cost").forEach(p=>{
-        totalPack += parseFloat(p.value)||0;
+        total += parseFloat(p.value)||0;
     });
 
     const delivery=parseFloat(document.getElementById("delivery-cost").value)||0;
     const margin=parseFloat(document.getElementById("profit-margin").value)||0;
 
-    const total = totalIng + totalPack + delivery;
+    total += delivery;
     const sale = total + total*(margin/100);
 
     document.getElementById("total").innerText=total.toFixed(2);
     document.getElementById("sale").innerText=sale.toFixed(2);
 }
 
-// ===== INIT =====
-setTimeout(()=>{
-    if(Object.keys(products).length===0){
-        products["Hamburguesa Base"]={
-            ingredients:[],
-            packing:[],
-            delivery:0,
-            margin:50
-        };
-        currentProduct="Hamburguesa Base";
-        saveToCloud();
-    }
-},1000);
-
+// INIT
+loadFromCloud();
 </script>
+
 </body>
 </html>
